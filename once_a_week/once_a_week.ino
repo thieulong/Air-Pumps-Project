@@ -12,10 +12,9 @@ RTC_DS3231 rtc;
 #define FRIDAY    5
 #define SATURDAY  6
 
-uint8_t DAY_1    = TUESDAY;
-uint8_t DAY_2    = FRIDAY;
-uint8_t START_HH = 23; 
-uint8_t START_MM = 0; 
+uint8_t DAY   = TUESDAY;
+uint8_t START_HH = 19; 
+uint8_t START_MM = 30; 
 
 char daysOfTheWeek[7][12] = {
   "Sunday",
@@ -85,9 +84,17 @@ void loop() {
   Serial.print(now.second(), DEC);
   Serial.println();
 
+  Serial.print("Pumps are set to run on ");
+  Serial.print(daysOfTheWeek[DAY]);
+  Serial.print(", at ");
+  Serial.print(START_HH);
+  Serial.print(":");
+  Serial.print(START_MM);
+  Serial.println(".");
+
   delay(1000);
 
-  if (now.dayOfTheWeek() == DAY_1 || now.dayOfTheWeek() == DAY_2) {
+  if (now.dayOfTheWeek() == DAY) {
     if (now.hour() == START_HH && now.minute() >= START_MM){
       // keep turning on and off relays for 1 hour 
       unsigned long startTime = millis();
