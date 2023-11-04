@@ -14,7 +14,7 @@ RTC_DS3231 rtc;
 
 uint8_t DAY_1    = TUESDAY;
 uint8_t DAY_2    = FRIDAY;
-uint8_t START_HH = 23; 
+uint8_t START_HH = 12; 
 uint8_t START_MM = 45; 
 
 char daysOfTheWeek[7][12] = {

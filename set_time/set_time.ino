@@ -1,7 +1,8 @@
 #include <Wire.h>
 #include "RTClib.h"
 
-RTC_DS3231 rtc;
+//RTC_DS3231 rtc;
+RTC_DS1307 rtc; 
 
 char daysOfTheWeek[7][12] = {
   "Sunday",
@@ -22,10 +23,10 @@ void setup() {
     while (1);
   }
 
-  if (rtc.lostPower()) {
-    Serial.println("RTC lost power, lets set the time!");
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  }
+//  if (rtc.lostPower()) {
+//    Serial.println("RTC lost power, lets set the time!");
+//    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+//  }
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 }
 
