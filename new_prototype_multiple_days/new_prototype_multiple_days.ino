@@ -16,11 +16,11 @@
 #define SATURDAY  6
 
 // Date & Time to activate Air Pumps
-const uint8_t DAYS_TO_ACTIVATE[] = {MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY}; 
+const uint8_t DAYS_TO_ACTIVATE[] = {TUESDAY}; 
 const uint8_t DAYS_TO_ACTIVATE_COUNT = sizeof(DAYS_TO_ACTIVATE) / sizeof(DAYS_TO_ACTIVATE[0]);
 
-uint8_t START_HH_ODD_WEEK = 17; 
-uint8_t START_HH_EVEN_WEEK = 17; 
+uint8_t START_HH_ODD_WEEK = 12; 
+uint8_t START_HH_EVEN_WEEK = 0; 
 uint8_t START_MM = 0; 
 
 char daysOfTheWeek[7][12] = {
@@ -50,6 +50,7 @@ DallasTemperature waterTempSensor(&oneWire);
 float waterTempCelsius;
 
 // Water turbidity
+const int mosfetTurbidityPin = 4;
 const int waterTurbidityPin = A3;
 float minVoltage = 0;
 float maxVoltage = 4.5;
@@ -68,6 +69,7 @@ void setup() {
 
   pinMode(RELAY_1, OUTPUT); 
   pinMode(RELAY_2, OUTPUT);
+  pinMode(mosfetTurbidityPin, OUTPUT);
 
   Serial.print("Blue Carbon Lab - ");
   Serial.print(device);
@@ -107,7 +109,7 @@ void setup() {
   Serial.println("All setup succeed!");
   Serial.println();
   
-  Serial.println("Logging data every 2 minute");
+  Serial.println("Logging data every hour");
   Serial.println();
 
   Serial.print("Pumps are set to run on the following days: ");
@@ -141,55 +143,46 @@ void setup() {
     Serial.println("[!] File Error");
   }
   waterTempSensor.begin();
-  for (int i = 0; i < 6; i++) {
-    LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
-    LowPower.powerDown(SLEEP_2S, ADC_OFF, BOD_OFF);
-  }
+  LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
 }
 
 void loop() {
+  static int lastHour = -1;
   // Time
   DateTime now = RTC.now();  
   //Week
   int week = (now.day() + 6) / 7;   
   // Turn off pump 
   deactivate_pumps();  
+  if (now.hour() != lastHour) {
+    log_data();
+    lastHour = now.hour(); 
+  }
   if (isInDaysToActivate(now.dayOfTheWeek())) {
     if (week == 1 || week == 3 || week == 5) {
       if (now.hour() == START_HH_ODD_WEEK && now.minute() >= START_MM){
-        activate_pump_1();
-        activate_pump_2();
+          activate_pumps();
       } else {
+        deactivate_pumps();
         sleep_mode();
       }
   } else if (week == 2 || week == 4) {
       if (now.hour() == START_HH_EVEN_WEEK && now.minute() >= START_MM){
-        activate_pump_1();
-        activate_pump_2();
+          activate_pumps();
       } else {
+        deactivate_pumps();
         sleep_mode();
       }
     }
   } else {
+    deactivate_pumps();
     sleep_mode();
   }
-  log_data();
 }
 
-void activate_pump_1(){
-  //Serial.println("[!] Pump 1 is running");
-  digitalWrite(RELAY_1, LOW); 
-  delay(30000);
-  digitalWrite(RELAY_1, HIGH);
-  //Serial.println("[!] Pump 1 has stopped");
-}
-
-void activate_pump_2(){
-  //Serial.println("[!] Pump 2 is running");
+void activate_pumps(){
+  digitalWrite(RELAY_1, LOW);
   digitalWrite(RELAY_2, LOW);
-  delay(30000);
-  digitalWrite(RELAY_2, HIGH); 
-  //Serial.println("[!] Pump 2 has stopped");
 }
 
 void deactivate_pumps(){
@@ -202,6 +195,8 @@ void log_data(){
   waterTempSensor.requestTemperatures();
   waterTempCelsius = waterTempSensor.getTempCByIndex(0);
   // Water turbidity
+  digitalWrite(mosfetTurbidityPin, HIGH);
+  delay(5000);
   int waterTurbiditySensor = analogRead(waterTurbidityPin);
   float turbidityVoltage = waterTurbiditySensor * (5.0 / 1024.0);
   //int turbidity = map(turbidityVoltage,0,4.5,100,0);
@@ -210,6 +205,7 @@ void log_data(){
   int newMinValue = 100;
   int newMaxValue = 0;
   int turbidity = (turbidityVoltage - minVoltage) * (newMaxValue - newMinValue) / (maxVoltage - minVoltage) + newMinValue;
+  digitalWrite(mosfetTurbidityPin, LOW);
   // Time
   DateTime now = RTC.now();
   sprintf(tmeStrng, "%04d/%02d/%02d,%02d:%02d:%02d", now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second()); 
@@ -239,8 +235,7 @@ bool isInDaysToActivate(uint8_t currentDay) {
 }
 
 void sleep_mode(){
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 7; i++) {
     LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
-    LowPower.powerDown(SLEEP_2S, ADC_OFF, BOD_OFF);
   }
 }
